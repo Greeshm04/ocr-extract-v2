@@ -13,36 +13,51 @@
 
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: #1a202c;
             min-height: 100vh;
             display: flex;
             justify-content: center;
             align-items: center;
             padding: 20px;
+            color: white;
         }
 
         .container {
-            background: white;
-            border-radius: 20px;
+            background: #2d3748;
+            border-radius: 8px;
             box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
-            padding: 30px;
+            padding: 40px;
             max-width: 1400px;
             width: 100%;
+            border: 1px solid #4a5568;
+            display: flex;
+            gap: 30px;
         }
 
         h1 {
             text-align: center;
-            color: #333;
+            color: white;
             margin-bottom: 30px;
             font-size: 2em;
+            font-weight: 600;
+            width: 100%;
+        }
+
+        .left-section {
+            flex: 0 0 400px;
+        }
+
+        .right-section {
+            flex: 1;
         }
 
         .video-container {
             position: relative;
             background: #000;
-            border-radius: 10px;
+            border-radius: 8px;
             overflow: hidden;
             margin-bottom: 20px;
+            border: 1px solid #4a5568;
         }
 
         #video {
@@ -56,19 +71,19 @@
             top: 15px;
             right: 15px;
             padding: 8px 16px;
-            border-radius: 20px;
+            border-radius: 4px;
             font-weight: 600;
             font-size: 14px;
             transition: all 0.3s ease;
         }
 
         .detected {
-            background: #10b981;
+            background: #3182ce;
             color: white;
         }
 
         .not-detected {
-            background: #ef4444;
+            background: #718096;
             color: white;
         }
 
@@ -78,32 +93,31 @@
             align-items: center;
             justify-content: center;
             flex-wrap: wrap;
+            margin-top: 20px;
         }
 
         button {
-            padding: 15px 40px;
+            padding: 12px 24px;
             font-size: 16px;
             font-weight: 600;
             border: none;
-            border-radius: 10px;
+            border-radius: 6px;
             cursor: pointer;
             transition: all 0.3s ease;
-            text-transform: uppercase;
             letter-spacing: 0.5px;
         }
 
         #captureBtn {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: #3182ce;
             color: white;
         }
 
         #captureBtn:hover:not(:disabled) {
-            transform: translateY(-2px);
-            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.4);
+            background: #2c5aa0;
         }
 
         #captureBtn:disabled {
-            background: #9ca3af;
+            background: #4a5568;
             cursor: not-allowed;
         }
 
@@ -111,9 +125,10 @@
             display: flex;
             gap: 20px;
             align-items: center;
-            padding: 15px;
-            background: #f3f4f6;
-            border-radius: 10px;
+            padding: 18px 24px;
+            background: #4a5568;
+            border-radius: 6px;
+            border: 1px solid #718096;
         }
 
         .status-item {
@@ -124,11 +139,11 @@
 
         .status-label {
             font-weight: 600;
-            color: #6b7280;
+            color: #a0aec0;
         }
 
         .status-value {
-            color: #111827;
+            color: white;
             font-weight: 700;
         }
 
@@ -153,13 +168,15 @@
         }
 
         .success {
-            background: #d1fae5;
-            color: #065f46;
+            background: #22543d;
+            color: #9ae6b4;
+            border: 1px solid #38a169;
         }
 
         .error {
-            background: #fee2e2;
-            color: #991b1b;
+            background: #742a2a;
+            color: #feb2b2;
+            border: 1px solid #e53e3e;
         }
 
         .pulse {
@@ -176,136 +193,163 @@
         }
 
         .ocr-data-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-            gap: 15px;
+            display: flex;
+            flex-direction: column;
+            gap: 1px;
             margin-top: 20px;
         }
 
         .ocr-item {
-            background: #f9fafb;
-            border: 2px solid #e5e7eb;
-            border-radius: 10px;
-            padding: 15px;
+            background: #4a5568;
+            border: 1px solid #718096;
+            border-radius: 0;
+            padding: 16px 20px;
             transition: all 0.3s ease;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid #718096;
         }
 
         .ocr-item:hover {
-            border-color: #667eea;
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.1);
+            background: #5a6578;
         }
 
         .ocr-item.found {
-            background: #ecfdf5;
-            border-color: #10b981;
+            background: #4a5568;
+            border-color: #718096;
         }
 
         .ocr-item.not-found {
-            background: #fef2f2;
-            border-color: #ef4444;
+            background: #4a5568;
+            border-color: #718096;
+        }
+
+        .ocr-item:last-child {
+            border-bottom: none;
         }
 
         .ocr-label {
-            font-size: 12px;
-            text-transform: uppercase;
-            font-weight: 700;
-            color: #6b7280;
-            margin-bottom: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            color: #a0aec0;
             letter-spacing: 0.5px;
+            flex: 0 0 150px;
         }
 
         .ocr-value {
             font-size: 16px;
-            font-weight: 600;
-            color: #111827;
+            font-weight: 700;
+            color: white;
             word-break: break-all;
+            flex: 1;
         }
 
         .ocr-value.empty {
-            color: #9ca3af;
+            color: #a0aec0;
             font-style: italic;
         }
 
         .ocr-icon {
-            float: right;
-            font-size: 20px;
+            font-size: 16px;
+            margin-left: 10px;
+            color: #a0aec0;
         }
 
         .ocr-input {
-            width: 100%;
+            flex: 1;
             padding: 8px 12px;
-            font-size: 16px;
-            font-weight: 600;
-            border: 2px solid #e5e7eb;
-            border-radius: 6px;
-            background: white;
-            color: #111827;
+            font-size: 15px;
+            font-weight: 500;
+            border: 1px solid #718096;
+            border-radius: 4px;
+            background: #2d3748;
+            color: white;
             transition: all 0.3s ease;
         }
 
         .ocr-input:focus {
             outline: none;
-            border-color: #667eea;
-            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+            border-color: #3182ce;
+            background: #4a5568;
         }
 
         .ocr-input::placeholder {
-            color: #9ca3af;
+            color: #a0aec0;
             font-style: italic;
         }
 
+        .copy-icon {
+            width: 16px;
+            height: 16px;
+            margin-left: 10px;
+            cursor: pointer;
+            opacity: 0.7;
+            transition: opacity 0.3s ease;
+        }
+
+        .copy-icon:hover {
+            opacity: 1;
+        }
+
         #saveBtn {
-            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            background: #3182ce;
             color: white;
         }
 
         #saveBtn:hover:not(:disabled) {
-            transform: translateY(-2px);
-            box-shadow: 0 10px 20px rgba(16, 185, 129, 0.4);
+            background: #2c5aa0;
         }
 
         #saveBtn:disabled {
-            background: #9ca3af;
+            background: #4a5568;
             cursor: not-allowed;
         }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>🎥 Router OCR Capture</h1>
+        <h1 style="position: absolute; top: 40px; left: 50%; transform: translateX(-50%);">Router OCR Capture</h1>
         
-        <div class="video-container">
-            <img id="video" src="{{ url_for('video_feed') }}" alt="Video Stream">
-            <div id="detectionBadge" class="detection-badge not-detected">No Detection</div>
-        </div>
+        <div class="left-section">
+            <div style="margin-top: 80px;">
+                <h2 style="color: white; font-size: 18px; margin-bottom: 15px; font-weight: 600;">Captured Image</h2>
+                <div class="video-container">
+                    <img id="video" src="{{ url_for('video_feed') }}" alt="Video Stream">
+                    <div id="detectionBadge" class="detection-badge not-detected">No Detection</div>
+                </div>
 
-        <div class="controls">
-            <button id="captureBtn" onclick="captureImage()">
-                📸 Capture Image
-            </button>
-            
-            <div class="status">
-                <div class="status-item">
-                    <span class="status-label">Images Saved:</span>
-                    <span class="status-value" id="savedCount">0</span>
+                <div class="controls" style="flex-direction: column; gap: 15px; align-items: stretch;">
+                    <button id="captureBtn" onclick="captureImage()">
+                        Capture Image
+                    </button>
+                    
+                    <div class="status">
+                        <div class="status-item">
+                            <span class="status-label">Images Saved:</span>
+                            <span class="status-value" id="savedCount">0</span>
+                        </div>
+                        <div class="status-item">
+                            <span class="status-label">Status:</span>
+                            <span class="status-value" id="statusText">Waiting...</span>
+                        </div>
+                    </div>
                 </div>
-                <div class="status-item">
-                    <span class="status-label">Status:</span>
-                    <span class="status-value" id="statusText">Waiting...</span>
-                </div>
+
+                <div id="message"></div>
             </div>
         </div>
 
-        <div id="message"></div>
-
-        <div id="ocrResults" style="display: none;">
-            <h2 style="margin-top: 30px; color: #333; text-align: center;">📊 Extracted Information</h2>
-            <div class="ocr-data-grid"></div>
-            <div style="text-align: center; margin-top: 20px;">
-                <button id="saveBtn" onclick="saveOCRData()" disabled>
-                    💾 Save as JSON
-                </button>
+        <div class="right-section">
+            <h2 style="color: white; font-size: 18px; margin-bottom: 20px; font-weight: 600; margin-top: 80px;">Extracted Information</h2>
+            
+            <div id="ocrResults" style="display: none;">
+                <div class="ocr-data-grid"></div>
+                <div style="text-align: center; margin-top: 30px;">
+                    <button id="saveBtn" onclick="saveOCRData()" disabled>
+                        Save as JSON
+                    </button>
+                </div>
             </div>
         </div>
     </div>
@@ -321,7 +365,7 @@
             isCapturing = true;
             const btn = document.getElementById('captureBtn');
             btn.disabled = true;
-            btn.textContent = '⏳ Capturing...';
+                btn.textContent = 'Capturing...';
             
             try {
                 const response = await fetch('/capture', {
@@ -353,7 +397,7 @@
             } finally {
                 isCapturing = false;
                 btn.disabled = false;
-                btn.textContent = '📸 Capture Image';
+                btn.textContent = 'Capture Image';
             }
         }
 
@@ -381,12 +425,12 @@
                 
                 if (data.detected) {
                     badge.className = 'detection-badge detected pulse';
-                    badge.textContent = '✓ Router Detected';
+                    badge.textContent = 'Router Detected';
                     statusText.textContent = 'Ready to Capture';
                     captureBtn.disabled = false;
                 } else {
                     badge.className = 'detection-badge not-detected';
-                    badge.textContent = '✗ No Detection';
+                    badge.textContent = 'No Detection';
                     statusText.textContent = 'Searching...';
                     captureBtn.disabled = true;
                 }
@@ -400,16 +444,16 @@
             const gridDiv = resultsDiv.querySelector('.ocr-data-grid');
             const saveBtn = document.getElementById('saveBtn');
             
-            // Field labels with icons
+            // Field labels
             const fieldLabels = {
-                'wpa_key': { label: 'WPA Key', icon: '🔐' },
-                'ip_address': { label: 'IP Address', icon: '🌐' },
-                'ssid': { label: 'SSID', icon: '📡' },
-                'mac_address': { label: 'MAC Address', icon: '🔗' },
-                'model_number': { label: 'Model Number', icon: '📦' },
-                'serial_number': { label: 'Serial Number', icon: '🏷️' },
-                'username': { label: 'Username', icon: '👤' },
-                'password': { label: 'Password', icon: '🔑' }
+                'wpa_key': { label: 'WPA Key', icon: '' },
+                'ip_address': { label: 'IP Address', icon: '' },
+                'ssid': { label: 'SSID', icon: '' },
+                'mac_address': { label: 'MAC Address', icon: '' },
+                'model_number': { label: 'Model Number', icon: '' },
+                'serial_number': { label: 'Serial Number', icon: '' },
+                'username': { label: 'Username', icon: '' },
+                'password': { label: 'Password', icon: '' }
             };
             
             // Clear previous data
@@ -424,14 +468,19 @@
                 itemDiv.className = `ocr-item ${hasValue ? 'found' : 'not-found'}`;
                 
                 itemDiv.innerHTML = `
-                    <div class="ocr-icon">${hasValue ? '✅' : '❌'}</div>
-                    <div class="ocr-label">${info.icon} ${info.label}</div>
+                    <div class="ocr-label">${info.label}</div>
                     <input type="text" 
                            class="ocr-input" 
                            id="ocr_${key}" 
                            value="${hasValue ? value : ''}" 
                            placeholder="Not found - Enter manually"
                            onchange="updateOCRField('${key}', this.value)">
+                    <div class="copy-icon" onclick="copyToClipboard('${key}')" title="Copy to clipboard">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                            <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                        </svg>
+                    </div>
                 `;
                 
                 gridDiv.appendChild(itemDiv);
@@ -440,13 +489,26 @@
             // Enable save button
             saveBtn.disabled = false;
             
-            // Show results with animation
+            // Show results
             resultsDiv.style.display = 'block';
-            resultsDiv.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
         }
 
         function updateOCRField(key, value) {
             currentOCRData[key] = value;
+        }
+
+        function copyToClipboard(key) {
+            const input = document.getElementById(`ocr_${key}`);
+            const value = input.value;
+            
+            if (value && value.trim() !== '') {
+                navigator.clipboard.writeText(value).then(() => {
+                    showMessage(`Copied ${key} to clipboard`, 'success');
+                }).catch(err => {
+                    console.error('Failed to copy: ', err);
+                    showMessage('Failed to copy to clipboard', 'error');
+                });
+            }
         }
 
         async function saveOCRData() {
@@ -457,7 +519,7 @@
 
             const saveBtn = document.getElementById('saveBtn');
             saveBtn.disabled = true;
-            saveBtn.textContent = '⏳ Saving...';
+            saveBtn.textContent = 'Saving...';
 
             try {
                 const response = await fetch('/save_ocr', {
@@ -483,7 +545,7 @@
                 showMessage('Failed to save data: ' + error.message, 'error');
                 saveBtn.disabled = false;
             } finally {
-                saveBtn.textContent = '💾 Save as JSON';
+                saveBtn.textContent = 'Save as JSON';
             }
         }
 
