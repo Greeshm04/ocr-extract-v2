@@ -1,4 +1,4 @@
-from flask import Flask, render_template, Response, jsonify
+from flask import Flask, render_template, Response, jsonify, request
 import cv2
 import os
 import time
@@ -7,6 +7,7 @@ import torch
 import torch.serialization
 from ultralytics import YOLO
 import threading
+import json
 from ocrV5 import process_single_image
 
 # Fix for PyTorch 2.6+ weights_only security feature
@@ -155,6 +156,39 @@ def status():
             'detected': current_bbox is not None,
             'saved_count': save_idx
         })
+
+@app.route('/save_ocr', methods=['POST'])
+def save_ocr():
+    try:
+        data = request.get_json()
+        filename = data.get('filename')
+        ocr_data = data.get('ocr_data')
+        
+        if not filename or not ocr_data:
+            return jsonify({'status': 'error', 'message': 'Missing filename or OCR data'}), 400
+        
+        # Create output directory if it doesn't exist
+        output_dir = os.path.join(OUTPUT_DIR, 'output')
+        os.makedirs(output_dir, exist_ok=True)
+        
+        # Generate JSON filename (same as image but with .json extension)
+        json_filename = os.path.splitext(filename)[0] + '.json'
+        json_path = os.path.join(output_dir, json_filename)
+        
+        # Save OCR data as JSON
+        with open(json_path, 'w', encoding='utf-8') as f:
+            json.dump(ocr_data, f, indent=4, ensure_ascii=False)
+        
+        print(f"[{time.strftime('%H:%M:%S')}] Saved JSON: {json_path}")
+        
+        return jsonify({
+            'status': 'success',
+            'message': f'Data saved successfully: {json_filename}'
+        })
+        
+    except Exception as e:
+        print(f"Error saving OCR data: {str(e)}")
+        return jsonify({'status': 'error', 'message': f'Failed to save: {str(e)}'}), 500
 
 if __name__ == '__main__':
     initialize_camera()

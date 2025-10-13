@@ -231,6 +231,44 @@
             float: right;
             font-size: 20px;
         }
+
+        .ocr-input {
+            width: 100%;
+            padding: 8px 12px;
+            font-size: 16px;
+            font-weight: 600;
+            border: 2px solid #e5e7eb;
+            border-radius: 6px;
+            background: white;
+            color: #111827;
+            transition: all 0.3s ease;
+        }
+
+        .ocr-input:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .ocr-input::placeholder {
+            color: #9ca3af;
+            font-style: italic;
+        }
+
+        #saveBtn {
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            color: white;
+        }
+
+        #saveBtn:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(16, 185, 129, 0.4);
+        }
+
+        #saveBtn:disabled {
+            background: #9ca3af;
+            cursor: not-allowed;
+        }
     </style>
 </head>
 <body>
@@ -264,11 +302,18 @@
         <div id="ocrResults" style="display: none;">
             <h2 style="margin-top: 30px; color: #333; text-align: center;">📊 Extracted Information</h2>
             <div class="ocr-data-grid"></div>
+            <div style="text-align: center; margin-top: 20px;">
+                <button id="saveBtn" onclick="saveOCRData()" disabled>
+                    💾 Save as JSON
+                </button>
+            </div>
         </div>
     </div>
 
     <script>
         let isCapturing = false;
+        let currentFilename = null;
+        let currentOCRData = {};
 
         async function captureImage() {
             if (isCapturing) return;
@@ -292,8 +337,12 @@
                     showMessage(data.message, 'success');
                     updateStatus();
                     
+                    // Store filename and OCR data
+                    currentFilename = data.filename;
+                    
                     // Display OCR data
                     if (data.ocr_data) {
+                        currentOCRData = data.ocr_data;
                         displayOCRData(data.ocr_data);
                     }
                 } else {
@@ -349,6 +398,7 @@
         function displayOCRData(ocrData) {
             const resultsDiv = document.getElementById('ocrResults');
             const gridDiv = resultsDiv.querySelector('.ocr-data-grid');
+            const saveBtn = document.getElementById('saveBtn');
             
             // Field labels with icons
             const fieldLabels = {
@@ -365,7 +415,7 @@
             // Clear previous data
             gridDiv.innerHTML = '';
             
-            // Create OCR data cards
+            // Create OCR data cards with editable inputs
             for (const [key, info] of Object.entries(fieldLabels)) {
                 const value = ocrData[key];
                 const hasValue = value && value !== null && value !== '';
@@ -376,17 +426,65 @@
                 itemDiv.innerHTML = `
                     <div class="ocr-icon">${hasValue ? '✅' : '❌'}</div>
                     <div class="ocr-label">${info.icon} ${info.label}</div>
-                    <div class="ocr-value ${hasValue ? '' : 'empty'}">
-                        ${hasValue ? value : 'Not found'}
-                    </div>
+                    <input type="text" 
+                           class="ocr-input" 
+                           id="ocr_${key}" 
+                           value="${hasValue ? value : ''}" 
+                           placeholder="Not found - Enter manually"
+                           onchange="updateOCRField('${key}', this.value)">
                 `;
                 
                 gridDiv.appendChild(itemDiv);
             }
             
+            // Enable save button
+            saveBtn.disabled = false;
+            
             // Show results with animation
             resultsDiv.style.display = 'block';
             resultsDiv.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }
+
+        function updateOCRField(key, value) {
+            currentOCRData[key] = value;
+        }
+
+        async function saveOCRData() {
+            if (!currentFilename) {
+                showMessage('No image data to save', 'error');
+                return;
+            }
+
+            const saveBtn = document.getElementById('saveBtn');
+            saveBtn.disabled = true;
+            saveBtn.textContent = '⏳ Saving...';
+
+            try {
+                const response = await fetch('/save_ocr', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        filename: currentFilename,
+                        ocr_data: currentOCRData
+                    })
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    showMessage(data.message, 'success');
+                } else {
+                    showMessage(data.message, 'error');
+                    saveBtn.disabled = false;
+                }
+            } catch (error) {
+                showMessage('Failed to save data: ' + error.message, 'error');
+                saveBtn.disabled = false;
+            } finally {
+                saveBtn.textContent = '💾 Save as JSON';
+            }
         }
 
         // Update status every second
