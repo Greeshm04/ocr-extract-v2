@@ -1,0 +1,398 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Router OCR Capture</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            padding: 30px;
+            max-width: 1400px;
+            width: 100%;
+        }
+
+        h1 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 30px;
+            font-size: 2em;
+        }
+
+        .video-container {
+            position: relative;
+            background: #000;
+            border-radius: 10px;
+            overflow: hidden;
+            margin-bottom: 20px;
+        }
+
+        #video {
+            width: 100%;
+            height: auto;
+            display: block;
+        }
+
+        .detection-badge {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-weight: 600;
+            font-size: 14px;
+            transition: all 0.3s ease;
+        }
+
+        .detected {
+            background: #10b981;
+            color: white;
+        }
+
+        .not-detected {
+            background: #ef4444;
+            color: white;
+        }
+
+        .controls {
+            display: flex;
+            gap: 15px;
+            align-items: center;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        button {
+            padding: 15px 40px;
+            font-size: 16px;
+            font-weight: 600;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        #captureBtn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        #captureBtn:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.4);
+        }
+
+        #captureBtn:disabled {
+            background: #9ca3af;
+            cursor: not-allowed;
+        }
+
+        .status {
+            display: flex;
+            gap: 20px;
+            align-items: center;
+            padding: 15px;
+            background: #f3f4f6;
+            border-radius: 10px;
+        }
+
+        .status-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .status-label {
+            font-weight: 600;
+            color: #6b7280;
+        }
+
+        .status-value {
+            color: #111827;
+            font-weight: 700;
+        }
+
+        .message {
+            padding: 12px 20px;
+            border-radius: 8px;
+            margin-top: 15px;
+            text-align: center;
+            font-weight: 500;
+            animation: slideIn 0.3s ease;
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .success {
+            background: #d1fae5;
+            color: #065f46;
+        }
+
+        .error {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+
+        .pulse {
+            animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% {
+                opacity: 1;
+            }
+            50% {
+                opacity: 0.7;
+            }
+        }
+
+        .ocr-data-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 15px;
+            margin-top: 20px;
+        }
+
+        .ocr-item {
+            background: #f9fafb;
+            border: 2px solid #e5e7eb;
+            border-radius: 10px;
+            padding: 15px;
+            transition: all 0.3s ease;
+        }
+
+        .ocr-item:hover {
+            border-color: #667eea;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.1);
+        }
+
+        .ocr-item.found {
+            background: #ecfdf5;
+            border-color: #10b981;
+        }
+
+        .ocr-item.not-found {
+            background: #fef2f2;
+            border-color: #ef4444;
+        }
+
+        .ocr-label {
+            font-size: 12px;
+            text-transform: uppercase;
+            font-weight: 700;
+            color: #6b7280;
+            margin-bottom: 8px;
+            letter-spacing: 0.5px;
+        }
+
+        .ocr-value {
+            font-size: 16px;
+            font-weight: 600;
+            color: #111827;
+            word-break: break-all;
+        }
+
+        .ocr-value.empty {
+            color: #9ca3af;
+            font-style: italic;
+        }
+
+        .ocr-icon {
+            float: right;
+            font-size: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎥 Router OCR Capture</h1>
+        
+        <div class="video-container">
+            <img id="video" src="{{ url_for('video_feed') }}" alt="Video Stream">
+            <div id="detectionBadge" class="detection-badge not-detected">No Detection</div>
+        </div>
+
+        <div class="controls">
+            <button id="captureBtn" onclick="captureImage()">
+                📸 Capture Image
+            </button>
+            
+            <div class="status">
+                <div class="status-item">
+                    <span class="status-label">Images Saved:</span>
+                    <span class="status-value" id="savedCount">0</span>
+                </div>
+                <div class="status-item">
+                    <span class="status-label">Status:</span>
+                    <span class="status-value" id="statusText">Waiting...</span>
+                </div>
+            </div>
+        </div>
+
+        <div id="message"></div>
+
+        <div id="ocrResults" style="display: none;">
+            <h2 style="margin-top: 30px; color: #333; text-align: center;">📊 Extracted Information</h2>
+            <div class="ocr-data-grid"></div>
+        </div>
+    </div>
+
+    <script>
+        let isCapturing = false;
+
+        async function captureImage() {
+            if (isCapturing) return;
+            
+            isCapturing = true;
+            const btn = document.getElementById('captureBtn');
+            btn.disabled = true;
+            btn.textContent = '⏳ Capturing...';
+            
+            try {
+                const response = await fetch('/capture', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    showMessage(data.message, 'success');
+                    updateStatus();
+                    
+                    // Display OCR data
+                    if (data.ocr_data) {
+                        displayOCRData(data.ocr_data);
+                    }
+                } else {
+                    showMessage(data.message, 'error');
+                }
+            } catch (error) {
+                showMessage('Failed to capture image: ' + error.message, 'error');
+            } finally {
+                isCapturing = false;
+                btn.disabled = false;
+                btn.textContent = '📸 Capture Image';
+            }
+        }
+
+        function showMessage(text, type) {
+            const messageDiv = document.getElementById('message');
+            messageDiv.textContent = text;
+            messageDiv.className = 'message ' + type;
+            
+            setTimeout(() => {
+                messageDiv.textContent = '';
+                messageDiv.className = '';
+            }, 3000);
+        }
+
+        async function updateStatus() {
+            try {
+                const response = await fetch('/status');
+                const data = await response.json();
+                
+                document.getElementById('savedCount').textContent = data.saved_count;
+                
+                const badge = document.getElementById('detectionBadge');
+                const statusText = document.getElementById('statusText');
+                const captureBtn = document.getElementById('captureBtn');
+                
+                if (data.detected) {
+                    badge.className = 'detection-badge detected pulse';
+                    badge.textContent = '✓ Router Detected';
+                    statusText.textContent = 'Ready to Capture';
+                    captureBtn.disabled = false;
+                } else {
+                    badge.className = 'detection-badge not-detected';
+                    badge.textContent = '✗ No Detection';
+                    statusText.textContent = 'Searching...';
+                    captureBtn.disabled = true;
+                }
+            } catch (error) {
+                console.error('Status update failed:', error);
+            }
+        }
+
+        function displayOCRData(ocrData) {
+            const resultsDiv = document.getElementById('ocrResults');
+            const gridDiv = resultsDiv.querySelector('.ocr-data-grid');
+            
+            // Field labels with icons
+            const fieldLabels = {
+                'wpa_key': { label: 'WPA Key', icon: '🔐' },
+                'ip_address': { label: 'IP Address', icon: '🌐' },
+                'ssid': { label: 'SSID', icon: '📡' },
+                'mac_address': { label: 'MAC Address', icon: '🔗' },
+                'model_number': { label: 'Model Number', icon: '📦' },
+                'serial_number': { label: 'Serial Number', icon: '🏷️' },
+                'username': { label: 'Username', icon: '👤' },
+                'password': { label: 'Password', icon: '🔑' }
+            };
+            
+            // Clear previous data
+            gridDiv.innerHTML = '';
+            
+            // Create OCR data cards
+            for (const [key, info] of Object.entries(fieldLabels)) {
+                const value = ocrData[key];
+                const hasValue = value && value !== null && value !== '';
+                
+                const itemDiv = document.createElement('div');
+                itemDiv.className = `ocr-item ${hasValue ? 'found' : 'not-found'}`;
+                
+                itemDiv.innerHTML = `
+                    <div class="ocr-icon">${hasValue ? '✅' : '❌'}</div>
+                    <div class="ocr-label">${info.icon} ${info.label}</div>
+                    <div class="ocr-value ${hasValue ? '' : 'empty'}">
+                        ${hasValue ? value : 'Not found'}
+                    </div>
+                `;
+                
+                gridDiv.appendChild(itemDiv);
+            }
+            
+            // Show results with animation
+            resultsDiv.style.display = 'block';
+            resultsDiv.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }
+
+        // Update status every second
+        setInterval(updateStatus, 1000);
+        updateStatus();
+    </script>
+</body>
+</html>
+
