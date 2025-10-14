@@ -1,0 +1,708 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Router OCR Capture</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: #1a202c;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+            color: white;
+        }
+
+        .container {
+            background: #2d3748;
+            border-radius: 8px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            padding: 40px;
+            max-width: 1400px;
+            width: 100%;
+            border: 1px solid #4a5568;
+            display: flex;
+            gap: 30px;
+        }
+
+        h1 {
+            text-align: center;
+            color: white;
+            margin-bottom: 30px;
+            font-size: 2em;
+            font-weight: 600;
+            width: 100%;
+        }
+
+        .left-section {
+            flex: 0 0 400px;
+        }
+
+        .right-section {
+            flex: 1;
+        }
+
+        .video-container {
+            position: relative;
+            background: #000;
+            border-radius: 8px;
+            overflow: hidden;
+            margin-bottom: 20px;
+            border: 1px solid #4a5568;
+        }
+
+        #video {
+            width: 100%;
+            height: auto;
+            display: block;
+        }
+
+        .detection-badge {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            padding: 8px 16px;
+            border-radius: 4px;
+            font-weight: 600;
+            font-size: 14px;
+            transition: all 0.3s ease;
+        }
+
+        .detected {
+            background: #3182ce;
+            color: white;
+        }
+
+        .not-detected {
+            background: #718096;
+            color: white;
+        }
+
+        .controls {
+            display: flex;
+            gap: 15px;
+            align-items: center;
+            justify-content: center;
+            flex-wrap: wrap;
+            margin-top: 20px;
+        }
+
+        button {
+            padding: 12px 24px;
+            font-size: 16px;
+            font-weight: 600;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            letter-spacing: 0.5px;
+        }
+
+        #captureBtn {
+            background: #3182ce;
+            color: white;
+        }
+
+        #captureBtn:hover:not(:disabled) {
+            background: #2c5aa0;
+        }
+
+        #captureBtn:disabled {
+            background: #4a5568;
+            cursor: not-allowed;
+        }
+
+        .status {
+            display: flex;
+            gap: 20px;
+            align-items: center;
+            padding: 18px 24px;
+            background: #4a5568;
+            border-radius: 6px;
+            border: 1px solid #718096;
+        }
+
+        .status-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .status-label {
+            font-weight: 600;
+            color: #a0aec0;
+        }
+
+        .status-value {
+            color: white;
+            font-weight: 700;
+        }
+
+        .message {
+            padding: 12px 20px;
+            border-radius: 8px;
+            margin-top: 15px;
+            text-align: center;
+            font-weight: 500;
+            animation: slideIn 0.3s ease;
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .success {
+            background: #22543d;
+            color: #9ae6b4;
+            border: 1px solid #38a169;
+        }
+
+        .error {
+            background: #742a2a;
+            color: #feb2b2;
+            border: 1px solid #e53e3e;
+        }
+
+        .pulse {
+            animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% {
+                opacity: 1;
+            }
+            50% {
+                opacity: 0.7;
+            }
+        }
+
+        .ocr-data-grid {
+            display: flex;
+            flex-direction: column;
+            gap: 1px;
+            margin-top: 20px;
+        }
+
+        .ocr-item {
+            background: #4a5568;
+            border: 1px solid #718096;
+            border-radius: 0;
+            padding: 16px 20px;
+            transition: all 0.3s ease;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid #718096;
+        }
+
+        .ocr-item:hover {
+            background: #5a6578;
+        }
+
+        .ocr-item.found {
+            background: #4a5568;
+            border-color: #718096;
+        }
+
+        .ocr-item.not-found {
+            background: #4a5568;
+            border-color: #718096;
+        }
+
+        .ocr-item:last-child {
+            border-bottom: none;
+        }
+
+        .ocr-label {
+            font-size: 14px;
+            font-weight: 600;
+            color: #a0aec0;
+            letter-spacing: 0.5px;
+            flex: 0 0 150px;
+        }
+
+        .ocr-value {
+            font-size: 16px;
+            font-weight: 700;
+            color: white;
+            word-break: break-all;
+            flex: 1;
+        }
+
+        .ocr-value.empty {
+            color: #a0aec0;
+            font-style: italic;
+        }
+
+        .ocr-icon {
+            font-size: 16px;
+            margin-left: 10px;
+            color: #a0aec0;
+        }
+
+        .ocr-input {
+            flex: 1;
+            padding: 8px 12px;
+            font-size: 15px;
+            font-weight: 500;
+            border: 1px solid #718096;
+            border-radius: 4px;
+            background: #2d3748;
+            color: white;
+            transition: all 0.3s ease;
+        }
+
+        .ocr-input:focus {
+            outline: none;
+            border-color: #3182ce;
+            background: #4a5568;
+        }
+
+        .ocr-input::placeholder {
+            color: #a0aec0;
+            font-style: italic;
+        }
+
+        .copy-icon {
+            width: 16px;
+            height: 16px;
+            margin-left: 10px;
+            cursor: pointer;
+            opacity: 0.7;
+            transition: opacity 0.3s ease;
+        }
+
+        .copy-icon:hover {
+            opacity: 1;
+        }
+
+        #saveBtn {
+            background: #3182ce;
+            color: white;
+        }
+
+        #saveBtn:hover:not(:disabled) {
+            background: #2c5aa0;
+        }
+
+        #saveBtn:disabled {
+            background: #4a5568;
+            cursor: not-allowed;
+        }
+        
+        /* Loading Spinner */
+        .spinner {
+            display: inline-block;
+            width: 16px;
+            height: 16px;
+            border: 3px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            border-top-color: white;
+            animation: spin 0.8s linear infinite;
+            vertical-align: middle;
+            margin-right: 8px;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1 style="position: absolute; top: 40px; left: 50%; transform: translateX(-50%);">Router OCR Capture</h1>
+        
+        <div class="left-section">
+            <div style="margin-top: 80px;">
+                <h2 style="color: white; font-size: 18px; margin-bottom: 15px; font-weight: 600;">Captured Image</h2>
+                <div class="video-container">
+                    <img id="video" src="{{ url_for('video_feed') }}" alt="Video Stream">
+                    <div id="detectionBadge" class="detection-badge not-detected">No Detection</div>
+                </div>
+
+                <div class="controls" style="flex-direction: column; gap: 15px; align-items: stretch;">
+                    <button id="captureBtn" onclick="captureImage()">
+                        Capture Image
+                    </button>
+                    
+                    <button id="nextBtn" onclick="readyForNext()" style="display: none; background: #38a169; color: white; padding: 12px 24px; font-size: 16px; font-weight: 600; border: none; border-radius: 6px; cursor: pointer;">
+                        📸 Capture Another
+                    </button>
+                    
+                    <div class="status">
+                        <div class="status-item">
+                            <span class="status-label">Images Saved:</span>
+                            <span class="status-value" id="savedCount">0</span>
+                        </div>
+                        <div class="status-item">
+                            <span class="status-label">Status:</span>
+                            <span class="status-value" id="statusText">Waiting...</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="message"></div>
+            </div>
+        </div>
+
+        <div class="right-section">
+            <h2 style="color: white; font-size: 18px; margin-bottom: 20px; font-weight: 600; margin-top: 80px;">Extracted Information</h2>
+            
+            <div id="ocrResults" style="display: none;">
+                <div class="ocr-data-grid"></div>
+                <div style="text-align: center; margin-top: 30px;">
+                    <button id="saveBtn" onclick="saveOCRData()" disabled>
+                        Save as JSON
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let isCapturing = false;
+        let currentFilename = null;
+        let currentOCRData = {};
+        let isReadyForCapture = true;  // Controls when user can capture again
+
+        async function captureImage() {
+            if (isCapturing || !isReadyForCapture) return;
+            
+            isCapturing = true;
+            isReadyForCapture = false;  // Prevent status updates from re-enabling
+            const btn = document.getElementById('captureBtn');
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinner"></span> Capturing...';
+            
+            try {
+                const response = await fetch('/capture', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    showMessage('Image captured! Processing with OCR...', 'success');
+                    updateStatus();
+                    
+                    // Store filename
+                    currentFilename = data.filename;
+                    
+                    // Show processing indicator
+                    btn.innerHTML = '<span class="spinner"></span> Processing OCR...';
+                    
+                    // Poll for OCR results
+                    await pollOCRResults(data.filename);
+                    
+                } else {
+                    showMessage(data.message, 'error');
+                    isCapturing = false;
+                    btn.disabled = false;
+                    btn.textContent = 'Capture Image';
+                }
+            } catch (error) {
+                showMessage('Failed to capture image: ' + error.message, 'error');
+                isCapturing = false;
+                btn.disabled = false;
+                btn.textContent = 'Capture Image';
+            }
+        }
+        
+        async function pollOCRResults(filename, maxAttempts = 240) {
+            const btn = document.getElementById('captureBtn');
+            let attempts = 0;
+            let lastStatus = 'unknown';
+            
+            console.log(`[OCR] Starting to poll for ${filename}...`);
+            console.log(`[OCR] Max wait time: ${(maxAttempts * 1000) / 1000}s`);
+            
+            while (attempts < maxAttempts) {
+                try {
+                    const response = await fetch(`/ocr_result/${filename}`);
+                    
+                    if (!response.ok) {
+                        console.error(`[OCR] HTTP error: ${response.status}`);
+                        await new Promise(resolve => setTimeout(resolve, 1000));
+                        attempts++;
+                        continue;
+                    }
+                    
+                    const result = await response.json();
+                    
+                    // Log only when status changes
+                    if (result.status !== lastStatus) {
+                        console.log(`[OCR] Status changed: ${lastStatus} → ${result.status}`);
+                        lastStatus = result.status;
+                    }
+                    
+                    if (result.status === 'completed') {
+                        // Success! Display results
+                        console.log('[OCR] ✅ Processing completed!');
+                        console.log('[OCR] Extracted data:', result.ocr_data);
+                        
+                        currentOCRData = result.ocr_data;
+                        displayOCRData(result.ocr_data);
+                        
+                        const time = result.processing_time ? result.processing_time.toFixed(2) : '0.00';
+                        showMessage(`✅ OCR completed in ${time}s! Click "Capture Another" when ready.`, 'success');
+                        
+                        // Show "Capture Another" button, hide capture button
+                        isCapturing = false;
+                        isReadyForCapture = false;
+                        btn.style.display = 'none';
+                        document.getElementById('nextBtn').style.display = 'block';
+                        document.getElementById('statusText').textContent = 'Results Ready';
+                        return;
+                        
+                    } else if (result.status === 'error') {
+                        console.error('[OCR] ❌ Processing error:', result.error);
+                        showMessage('❌ OCR failed: ' + result.error + '. Retrying...', 'error');
+                        
+                        // Don't give up - keep trying for a bit longer
+                        if (attempts < 60) {
+                            await new Promise(resolve => setTimeout(resolve, 2000));
+                            attempts++;
+                            continue;
+                        } else {
+                            // After many retries, give up
+                            isCapturing = false;
+                            btn.disabled = false;
+                            btn.textContent = 'Capture Image';
+                            isReadyForCapture = true;
+                            return;
+                        }
+                    }
+                    // If status is 'processing', continue polling
+                    
+                } catch (error) {
+                    console.error('[OCR] Polling error:', error);
+                }
+                
+                // Wait 1 second before next attempt (reduced from 500ms to reduce load)
+                await new Promise(resolve => setTimeout(resolve, 1000));
+                attempts++;
+                
+                // Update button text every 3 seconds
+                if (attempts % 3 === 0) {
+                    const elapsed = attempts;
+                    btn.innerHTML = `<span class="spinner"></span> Processing (${elapsed}s)...`;
+                }
+            }
+            
+            // Timeout - show error but don't reset
+            console.error(`[OCR] ⚠️ Timeout after ${maxAttempts} seconds`);
+            console.error(`[OCR] Last status: ${lastStatus}`);
+            showMessage('⚠️ OCR is taking very long. Please check console logs and try again.', 'error');
+            
+            // Reset for retry
+            isCapturing = false;
+            btn.style.display = 'block';
+            btn.disabled = false;
+            btn.textContent = 'Retry Capture';
+            isReadyForCapture = true;
+        }
+
+        function showMessage(text, type) {
+            const messageDiv = document.getElementById('message');
+            messageDiv.textContent = text;
+            messageDiv.className = 'message ' + type;
+            
+            setTimeout(() => {
+                messageDiv.textContent = '';
+                messageDiv.className = '';
+            }, 3000);
+        }
+
+        async function updateStatus() {
+            try {
+                const response = await fetch('/status');
+                const data = await response.json();
+                
+                document.getElementById('savedCount').textContent = data.saved_count;
+                
+                const badge = document.getElementById('detectionBadge');
+                const statusText = document.getElementById('statusText');
+                const captureBtn = document.getElementById('captureBtn');
+                
+                // Only update if user is ready for next capture
+                if (!isReadyForCapture) {
+                    // User is viewing results, don't change status
+                    return;
+                }
+                
+                if (data.detected) {
+                    badge.className = 'detection-badge detected pulse';
+                    badge.textContent = 'Router Detected';
+                    statusText.textContent = 'Ready to Capture';
+                    captureBtn.disabled = false;
+                } else {
+                    badge.className = 'detection-badge not-detected';
+                    badge.textContent = 'No Detection';
+                    statusText.textContent = 'Searching...';
+                    captureBtn.disabled = true;
+                }
+            } catch (error) {
+                console.error('Status update failed:', error);
+            }
+        }
+        
+        function readyForNext() {
+            // User clicked "Capture Another" - reset UI for next capture
+            console.log('[UI] Ready for next capture');
+            
+            isReadyForCapture = true;
+            isCapturing = false;
+            
+            // Hide results, show capture button
+            document.getElementById('ocrResults').style.display = 'none';
+            document.getElementById('nextBtn').style.display = 'none';
+            document.getElementById('captureBtn').style.display = 'block';
+            document.getElementById('captureBtn').disabled = true;  // Will be enabled by detection
+            document.getElementById('captureBtn').textContent = 'Capture Image';
+            document.getElementById('statusText').textContent = 'Searching...';
+            
+            // Clear message
+            document.getElementById('message').textContent = '';
+            document.getElementById('message').className = '';
+            
+            // Resume status updates
+            updateStatus();
+        }
+
+        function displayOCRData(ocrData) {
+            const resultsDiv = document.getElementById('ocrResults');
+            const gridDiv = resultsDiv.querySelector('.ocr-data-grid');
+            const saveBtn = document.getElementById('saveBtn');
+            
+            // Field labels
+            const fieldLabels = {
+                'wpa_key': { label: 'WPA Key', icon: '🔐' },
+                'ip_address': { label: 'IP Address', icon: '🌐' },
+                'ssid': { label: 'SSID', icon: '📡' },
+                'mac_address': { label: 'MAC Address', icon: '🔗' },
+                'mta_mac': { label: 'MTA MAC', icon: '📶' },
+                'model_number': { label: 'Model Number', icon: '📦' },
+                'serial_number': { label: 'Serial Number', icon: '🏷️' },
+                'username': { label: 'Username', icon: '👤' },
+                'password': { label: 'Password', icon: '🔑' }
+            };
+            
+            // Clear previous data
+            gridDiv.innerHTML = '';
+            
+            // Create OCR data cards with editable inputs
+            for (const [key, info] of Object.entries(fieldLabels)) {
+                const value = ocrData[key];
+                const hasValue = value && value !== null && value !== '';
+                
+                const itemDiv = document.createElement('div');
+                itemDiv.className = `ocr-item ${hasValue ? 'found' : 'not-found'}`;
+                
+                itemDiv.innerHTML = `
+                    <div class="ocr-label">${info.label}</div>
+                    <input type="text" 
+                           class="ocr-input" 
+                           id="ocr_${key}" 
+                           value="${hasValue ? value : ''}" 
+                           placeholder="Not found - Enter manually"
+                           onchange="updateOCRField('${key}', this.value)">
+                    <div class="copy-icon" onclick="copyToClipboard('${key}')" title="Copy to clipboard">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                            <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                        </svg>
+                    </div>
+                `;
+                
+                gridDiv.appendChild(itemDiv);
+            }
+            
+            // Enable save button
+            saveBtn.disabled = false;
+            
+            // Show results
+            resultsDiv.style.display = 'block';
+        }
+
+        function updateOCRField(key, value) {
+            currentOCRData[key] = value;
+        }
+
+        function copyToClipboard(key) {
+            const input = document.getElementById(`ocr_${key}`);
+            const value = input.value;
+            
+            if (value && value.trim() !== '') {
+                navigator.clipboard.writeText(value).then(() => {
+                    showMessage(`Copied ${key} to clipboard`, 'success');
+                }).catch(err => {
+                    console.error('Failed to copy: ', err);
+                    showMessage('Failed to copy to clipboard', 'error');
+                });
+            }
+        }
+
+        async function saveOCRData() {
+            if (!currentFilename) {
+                showMessage('No image data to save', 'error');
+                return;
+            }
+
+            const saveBtn = document.getElementById('saveBtn');
+            saveBtn.disabled = true;
+            saveBtn.textContent = 'Saving...';
+
+            try {
+                const response = await fetch('/save_ocr', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        filename: currentFilename,
+                        ocr_data: currentOCRData
+                    })
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    showMessage(data.message, 'success');
+                } else {
+                    showMessage(data.message, 'error');
+                    saveBtn.disabled = false;
+                }
+            } catch (error) {
+                showMessage('Failed to save data: ' + error.message, 'error');
+                saveBtn.disabled = false;
+            } finally {
+                saveBtn.textContent = 'Save as JSON';
+            }
+        }
+
+        // Update status every second
+        setInterval(updateStatus, 1000);
+        updateStatus();
+    </script>
+</body>
+</html>
+
