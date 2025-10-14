@@ -8,7 +8,7 @@ import torch.serialization
 from ultralytics import YOLO
 import threading
 import json
-from ocr_ultra_fast import process_single_image_ultra_fast
+from ocrV5_fast import process_single_image_fast
 
 # Fix for PyTorch 2.6+ weights_only security feature
 try:
@@ -181,9 +181,9 @@ def process_ocr_async(filename, filepath):
         if not os.path.exists(filepath):
             raise FileNotFoundError(f"Image file not found: {filepath}")
         
-        # Use ULTRA-FAST OCR processing
-        print(f"   Calling ULTRA-FAST OCR engine...")
-        ocr_data = process_single_image_ultra_fast(filepath)
+        # Use fast OCR processing
+        print(f"   Calling OCR engine...")
+        ocr_data = process_single_image_fast(filepath, output_format='dict')
         
         elapsed = time.time() - start_time
         
@@ -352,11 +352,11 @@ def save_ocr():
         return jsonify({'status': 'error', 'message': f'Failed to save: {str(e)}'}), 500
 
 if __name__ == '__main__':
-    # Initialize ULTRA-FAST OCR engine at startup for faster first capture
-    print("\n🔄 Pre-initializing ULTRA-FAST OCR engine...")
-    from ocr_ultra_fast import UltraFastRouterOCR
-    _ = UltraFastRouterOCR()  # Initialize singleton
-    print("✅ ULTRA-FAST OCR engine ready!\n")
+    # Initialize OCR engine at startup for faster first capture
+    print("\n🔄 Pre-initializing OCR engine...")
+    from ocrV5_fast import FastRouterInfoExtractor
+    _ = FastRouterInfoExtractor()  # Initialize singleton
+    print("✅ OCR engine ready!\n")
     
     initialize_camera()
     app.run(debug=True, host='0.0.0.0', port=5001, threaded=True)
