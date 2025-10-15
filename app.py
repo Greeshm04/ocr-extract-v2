@@ -9,7 +9,6 @@ from ultralytics import YOLO
 import threading
 import json
 from ocrV5 import process_single_image
-from ocrV5_fast import process_single_image_fast
 
 # Fix for PyTorch 2.6+ weights_only security feature
 try:
@@ -137,7 +136,7 @@ def capture():
                 
                 # Process with OCR
                 print("🔍 Processing image with OCR...")
-                ocr_data = process_single_image_fast(fname, output_format='dict')
+                ocr_data = process_single_image(fname, output_format='dict')
                 
                 save_idx += 1
                 

@@ -229,22 +229,22 @@ class RouterInfoExtractor:
         # Only EasyOCR
         method = 'easyocr'
         results[method] = {}
+        if(method == "easyocr" and (preprocess_name == "original" or preprocess_name == "enhanced")): 
+            for preprocess_name, proc_image in processed_images.items():
+                if verbose:
+                    print(f"🔍 {method.upper()} with {preprocess_name} preprocessing...")
 
-        for preprocess_name, proc_image in processed_images.items():
-            if verbose:
-                print(f"🔍 {method.upper()} with {preprocess_name} preprocessing...")
+                text = self.extract_text_easyocr(proc_image)
+                extracted_info = self.extract_information(text)
 
-            text = self.extract_text_easyocr(proc_image)
-            extracted_info = self.extract_information(text)
+                results[method][preprocess_name] = {
+                    'text': text,
+                    'extracted_info': extracted_info
+                }
 
-            results[method][preprocess_name] = {
-                'text': text,
-                'extracted_info': extracted_info
-            }
-
-            print("########################################################")
-            print(text)
-            print("########################################################")
+                print("########################################################")
+                print(text)
+                print("########################################################")
 
 
         return results
