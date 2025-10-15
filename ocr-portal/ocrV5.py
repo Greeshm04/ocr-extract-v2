@@ -18,7 +18,6 @@ import cv2
 import numpy as np
 import os
 from PIL import Image
-import pytesseract
 import easyocr
 import re
 import pandas as pd
@@ -27,23 +26,17 @@ import sys
 import warnings
 warnings.filterwarnings('ignore')
 
+# Fix for Pillow 10+ compatibility with EasyOCR
+if not hasattr(Image, 'ANTIALIAS'):
+    Image.ANTIALIAS = Image.LANCZOS
+
 
 class RouterInfoExtractor:
     def __init__(self):
-        print("🤖 Initializing OCR engines...")
+        print("🤖 Initializing EasyOCR engine...")
         
         # Initialize EasyOCR
         self.easyocr_reader = easyocr.Reader(['en'], gpu=False)
-        
-        # Check if Tesseract is available
-        self.tesseract_available = False
-        try:
-            pytesseract.get_tesseract_version()
-            self.tesseract_available = True
-            print("✅ Tesseract OCR: Available")
-        except:
-            print("⚠  Tesseract OCR: Not available (will use EasyOCR only)")
-            print("   Install Tesseract for better OCR results: https://github.com/tesseract-ocr/tesseract")
         
         print("✅ EasyOCR: Available")
 
@@ -119,15 +112,6 @@ class RouterInfoExtractor:
         processed_images['enhanced'] = enhanced
 
         return processed_images
-
-    def extract_text_tesseract(self, image, config='--psm 6'):
-        """Extract text using Tesseract OCR"""
-        try:
-            text = pytesseract.image_to_string(image, config=config)
-            return text.strip()
-        except Exception as e:
-            print(f"Tesseract error: {e}")
-            return ""
 
     def extract_text_easyocr(self, image):
         """Extract text using EasyOCR"""
@@ -226,7 +210,7 @@ class RouterInfoExtractor:
         return extracted_info
 
     def process_image(self, image_path, verbose=True):
-        """Main processing function"""
+        """Main processing function (EasyOCR only)"""
         # Load image
         image = cv2.imread(image_path)
         if image is None:
@@ -242,42 +226,25 @@ class RouterInfoExtractor:
 
         results = {}
 
-        # Try different OCR methods and preprocessing combinations
-        ocr_methods = ['tesseract', 'easyocr']
+        # Only EasyOCR
+        method = 'easyocr'
+        results[method] = {}
 
-        for method in ocr_methods:
-            results[method] = {}
+        for preprocess_name, proc_image in processed_images.items():
+            if verbose:
+                print(f"🔍 {method.upper()} with {preprocess_name} preprocessing...")
 
-            for preprocess_name, proc_image in processed_images.items():
-                if verbose:
-                    print(f"🔍 {method.upper()} with {preprocess_name} preprocessing...")
+            text = self.extract_text_easyocr(proc_image)
+            extracted_info = self.extract_information(text)
 
-                if method == 'tesseract':
-                    # Try different PSM modes for Tesseract
-                    psm_modes = ['--psm 6', '--psm 4', '--psm 11']
-                    best_text = ""
+            results[method][preprocess_name] = {
+                'text': text,
+                'extracted_info': extracted_info
+            }
 
-                    for psm in psm_modes:
-                        text = self.extract_text_tesseract(proc_image, psm)
-                        if len(text) > len(best_text):
-                            best_text = text
-
-                    extracted_info = self.extract_information(best_text)
-
-                elif method == 'easyocr':
-                # if(method == 'easyocr' and (preprocess_name == "original" or preprocess_name == "enhanced")) : 
-                    text = self.extract_text_easyocr(proc_image)
-                    best_text = text
-                    extracted_info = self.extract_information(text)
-
-                results[method][preprocess_name] = {
-                        'text': best_text,
-                        'extracted_info': extracted_info
-                }
-
-                print("########################################################")
-                print(best_text)
-                print("########################################################")
+            print("########################################################")
+            print(text)
+            print("########################################################")
 
 
         return results
@@ -296,9 +263,6 @@ class RouterInfoExtractor:
             ('easyocr', 'enhanced'),
             ('easyocr', 'otsu'),
             ('easyocr', 'original'),
-            ('tesseract', 'enhanced'),
-            ('tesseract', 'otsu'),
-            ('tesseract', 'original'),
         ]
 
         for info_type in final_info.keys():

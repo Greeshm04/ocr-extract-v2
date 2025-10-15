@@ -44,7 +44,7 @@
         }
 
         .left-section {
-            flex: 0 0 400px;
+            flex: 0 0 600px; /* was 400px */
         }
 
         .right-section {
@@ -58,11 +58,14 @@
             overflow: hidden;
             margin-bottom: 20px;
             border: 1px solid #4a5568;
+            height: 400px; /* set a fixed height */
+            min-width: 600px;
         }
 
         #video {
             width: 100%;
-            height: auto;
+            height: 400px; /* force height */
+            object-fit: cover;
             display: block;
         }
 
@@ -305,22 +308,43 @@
             background: #4a5568;
             cursor: not-allowed;
         }
-        
-        /* Loading Spinner */
-        .spinner {
-            display: inline-block;
-            width: 16px;
-            height: 16px;
-            border: 3px solid rgba(255, 255, 255, 0.3);
-            border-radius: 50%;
-            border-top-color: white;
-            animation: spin 0.8s linear infinite;
-            vertical-align: middle;
-            margin-right: 8px;
+
+        #progressBar {
+            display: none;
+            width: 100%;
+            margin-bottom: 15px;
         }
-        
-        @keyframes spin {
-            to { transform: rotate(360deg); }
+
+        #progressFill {
+            height: 18px; /* Increased height */
+            background: linear-gradient(90deg, #3182ce 40%, #63b3ed 100%);
+            width: 0%;
+            border-radius: 4px;
+            transition: width 0.5s;
+            animation: progressAnim 1.2s infinite linear;
+        }
+
+        @keyframes progressAnim {
+            0% { filter: brightness(1); }
+            50% { filter: brightness(1.3); }
+            100% { filter: brightness(1); }
+        }
+
+        .edit-btn {
+            margin-left: 10px;
+            padding: 6px 14px;
+            font-size: 14px;
+            font-weight: 500;
+            background: #3182ce;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+
+        .edit-btn:hover {
+            background: #2c5aa0;
         }
     </style>
 </head>
@@ -337,12 +361,16 @@
                 </div>
 
                 <div class="controls" style="flex-direction: column; gap: 15px; align-items: stretch;">
+                    <div style="margin-bottom: 10px;">
+                        <label style="font-weight:600;">
+                            <input type="radio" name="captureMode" value="manual" onchange="setCaptureMode('manual')"> Manual
+                        </label>
+                        <label style="font-weight:600; margin-left:20px;">
+                            <input type="radio" name="captureMode" value="live" checked onchange="setCaptureMode('live')"> Live Stream
+                        </label>
+                    </div>
                     <button id="captureBtn" onclick="captureImage()">
                         Capture Image
-                    </button>
-                    
-                    <button id="nextBtn" onclick="readyForNext()" style="display: none; background: #38a169; color: white; padding: 12px 24px; font-size: 16px; font-weight: 600; border: none; border-radius: 6px; cursor: pointer;">
-                        📸 Capture Another
                     </button>
                     
                     <div class="status">
@@ -355,9 +383,15 @@
                             <span class="status-value" id="statusText">Waiting...</span>
                         </div>
                     </div>
+
+                    <div id="progressBar">
+                        <div id="progressLabel" style="text-align:center; color:#3182ce; font-weight:600; margin-bottom:6px; font-size:16px; display:none;">Processing...</div>
+                        <div id="progressFill"></div>
+                    </div>
                 </div>
 
                 <div id="message"></div>
+                <div id="capturedImageName" style="text-align:center; color:#63b3ed; font-weight:600; margin-top:8px;"></div>
             </div>
         </div>
 
@@ -377,148 +411,85 @@
 
     <script>
         let isCapturing = false;
+        let autoCaptureInterval = null;
+        let captureMode = 'live';
         let currentFilename = null;
         let currentOCRData = {};
-        let isReadyForCapture = true;  // Controls when user can capture again
+        let nextCaptureSeconds = 10;
+        let timerInterval = null;
+        let isSavePending = false;
+
+        function showProgressBar() {
+            document.getElementById('progressBar').style.display = 'block';
+            document.getElementById('progressFill').style.width = '30%';
+            document.getElementById('progressLabel').style.display = 'block';
+        }
+
+        function updateProgressBar(percent) {
+            document.getElementById('progressFill').style.width = percent + '%';
+        }
+
+        function hideProgressBar() {
+            document.getElementById('progressBar').style.display = 'none';
+            document.getElementById('progressFill').style.width = '0%';
+            document.getElementById('progressLabel').style.display = 'none';
+        }
+
+        function clearOCRResults() {
+            const resultsDiv = document.getElementById('ocrResults');
+            resultsDiv.style.display = 'none';
+            const gridDiv = resultsDiv.querySelector('.ocr-data-grid');
+            if (gridDiv) gridDiv.innerHTML = '';
+            document.getElementById('saveBtn').disabled = true;
+        }
 
         async function captureImage() {
-            if (isCapturing || !isReadyForCapture) return;
-            
+            if (isCapturing || isSavePending) return;
             isCapturing = true;
-            isReadyForCapture = false;  // Prevent status updates from re-enabling
+
+            // Clear previous OCR results
+            clearOCRResults();
+
+            // Disable all controls
+            document.querySelectorAll('input, button').forEach(el => el.disabled = true);
+
+            showProgressBar();
+            updateProgressBar(30);
+
             const btn = document.getElementById('captureBtn');
-            btn.disabled = true;
-            btn.innerHTML = '<span class="spinner"></span> Capturing...';
-            
+            btn.textContent = 'Capturing...';
+
+            stopAutoCapture(); // Pause auto-capture and timer
+
+            showMessage('Image captured, processing...', 'success');
+
             try {
-                const response = await fetch('/capture', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    }
-                });
-                
+                const response = await fetch('/capture', { method: 'POST', headers: { 'Content-Type': 'application/json' } });
+                updateProgressBar(60);
                 const data = await response.json();
-                
+
                 if (response.ok) {
-                    showMessage('Image captured! Processing with OCR...', 'success');
                     updateStatus();
-                    
-                    // Store filename
                     currentFilename = data.filename;
-                    
-                    // Show processing indicator
-                    btn.innerHTML = '<span class="spinner"></span> Processing OCR...';
-                    
-                    // Poll for OCR results
-                    await pollOCRResults(data.filename);
-                    
+                    document.getElementById('capturedImageName').textContent = `Captured: ${data.filename}`;
+                    if (data.ocr_data) {
+                        currentOCRData = data.ocr_data;
+                        updateProgressBar(90);
+                        displayOCRData(data.ocr_data);
+                        showMessage('Processing complete!', 'success');
+                    }
                 } else {
                     showMessage(data.message, 'error');
-                    isCapturing = false;
-                    btn.disabled = false;
-                    btn.textContent = 'Capture Image';
                 }
             } catch (error) {
                 showMessage('Failed to capture image: ' + error.message, 'error');
+            } finally {
                 isCapturing = false;
-                btn.disabled = false;
-                btn.textContent = 'Capture Image';
+                updateProgressBar(100);
+                setTimeout(hideProgressBar, 500);
+                document.querySelectorAll('input, button').forEach(el => el.disabled = false);
+                document.getElementById('captureBtn').textContent = 'Capture Image';
             }
-        }
-        
-        async function pollOCRResults(filename, maxAttempts = 240) {
-            const btn = document.getElementById('captureBtn');
-            let attempts = 0;
-            let lastStatus = 'unknown';
-            
-            console.log(`[OCR] Starting to poll for ${filename}...`);
-            console.log(`[OCR] Max wait time: ${(maxAttempts * 1000) / 1000}s`);
-            
-            while (attempts < maxAttempts) {
-                try {
-                    const response = await fetch(`/ocr_result/${filename}`);
-                    
-                    if (!response.ok) {
-                        console.error(`[OCR] HTTP error: ${response.status}`);
-                        await new Promise(resolve => setTimeout(resolve, 1000));
-                        attempts++;
-                        continue;
-                    }
-                    
-                    const result = await response.json();
-                    
-                    // Log only when status changes
-                    if (result.status !== lastStatus) {
-                        console.log(`[OCR] Status changed: ${lastStatus} → ${result.status}`);
-                        lastStatus = result.status;
-                    }
-                    
-                    if (result.status === 'completed') {
-                        // Success! Display results
-                        console.log('[OCR] ✅ Processing completed!');
-                        console.log('[OCR] Extracted data:', result.ocr_data);
-                        
-                        currentOCRData = result.ocr_data;
-                        displayOCRData(result.ocr_data);
-                        
-                        const time = result.processing_time ? result.processing_time.toFixed(2) : '0.00';
-                        showMessage(`✅ OCR completed in ${time}s! Click "Capture Another" when ready.`, 'success');
-                        
-                        // Show "Capture Another" button, hide capture button
-                        isCapturing = false;
-                        isReadyForCapture = false;
-                        btn.style.display = 'none';
-                        document.getElementById('nextBtn').style.display = 'block';
-                        document.getElementById('statusText').textContent = 'Results Ready';
-                        return;
-                        
-                    } else if (result.status === 'error') {
-                        console.error('[OCR] ❌ Processing error:', result.error);
-                        showMessage('❌ OCR failed: ' + result.error + '. Retrying...', 'error');
-                        
-                        // Don't give up - keep trying for a bit longer
-                        if (attempts < 60) {
-                            await new Promise(resolve => setTimeout(resolve, 2000));
-                            attempts++;
-                            continue;
-                        } else {
-                            // After many retries, give up
-                            isCapturing = false;
-                            btn.disabled = false;
-                            btn.textContent = 'Capture Image';
-                            isReadyForCapture = true;
-                            return;
-                        }
-                    }
-                    // If status is 'processing', continue polling
-                    
-                } catch (error) {
-                    console.error('[OCR] Polling error:', error);
-                }
-                
-                // Wait 1 second before next attempt (reduced from 500ms to reduce load)
-                await new Promise(resolve => setTimeout(resolve, 1000));
-                attempts++;
-                
-                // Update button text every 3 seconds
-                if (attempts % 3 === 0) {
-                    const elapsed = attempts;
-                    btn.innerHTML = `<span class="spinner"></span> Processing (${elapsed}s)...`;
-                }
-            }
-            
-            // Timeout - show error but don't reset
-            console.error(`[OCR] ⚠️ Timeout after ${maxAttempts} seconds`);
-            console.error(`[OCR] Last status: ${lastStatus}`);
-            showMessage('⚠️ OCR is taking very long. Please check console logs and try again.', 'error');
-            
-            // Reset for retry
-            isCapturing = false;
-            btn.style.display = 'block';
-            btn.disabled = false;
-            btn.textContent = 'Retry Capture';
-            isReadyForCapture = true;
         }
 
         function showMessage(text, type) {
@@ -543,17 +514,11 @@
                 const statusText = document.getElementById('statusText');
                 const captureBtn = document.getElementById('captureBtn');
                 
-                // Only update if user is ready for next capture
-                if (!isReadyForCapture) {
-                    // User is viewing results, don't change status
-                    return;
-                }
-                
                 if (data.detected) {
                     badge.className = 'detection-badge detected pulse';
                     badge.textContent = 'Router Detected';
                     statusText.textContent = 'Ready to Capture';
-                    captureBtn.disabled = false;
+                    captureBtn.disabled = (captureMode === 'live');
                 } else {
                     badge.className = 'detection-badge not-detected';
                     badge.textContent = 'No Detection';
@@ -564,36 +529,12 @@
                 console.error('Status update failed:', error);
             }
         }
-        
-        function readyForNext() {
-            // User clicked "Capture Another" - reset UI for next capture
-            console.log('[UI] Ready for next capture');
-            
-            isReadyForCapture = true;
-            isCapturing = false;
-            
-            // Hide results, show capture button
-            document.getElementById('ocrResults').style.display = 'none';
-            document.getElementById('nextBtn').style.display = 'none';
-            document.getElementById('captureBtn').style.display = 'block';
-            document.getElementById('captureBtn').disabled = true;  // Will be enabled by detection
-            document.getElementById('captureBtn').textContent = 'Capture Image';
-            document.getElementById('statusText').textContent = 'Searching...';
-            
-            // Clear message
-            document.getElementById('message').textContent = '';
-            document.getElementById('message').className = '';
-            
-            // Resume status updates
-            updateStatus();
-        }
 
         function displayOCRData(ocrData) {
             const resultsDiv = document.getElementById('ocrResults');
             const gridDiv = resultsDiv.querySelector('.ocr-data-grid');
             const saveBtn = document.getElementById('saveBtn');
             
-            // Field labels
             const fieldLabels = {
                 'wpa_key': { label: 'WPA Key', icon: '' },
                 'ip_address': { label: 'IP Address', icon: '' },
@@ -605,13 +546,13 @@
                 'password': { label: 'Password', icon: '' }
             };
             
-            // Clear previous data
             gridDiv.innerHTML = '';
             
-            // Create OCR data cards with editable inputs
             for (const [key, info] of Object.entries(fieldLabels)) {
                 const value = ocrData[key];
                 const hasValue = value && value !== null && value !== '';
+                const inputId = `ocr_${key}`;
+                const editBtnId = `edit_${key}`;
                 
                 const itemDiv = document.createElement('div');
                 itemDiv.className = `ocr-item ${hasValue ? 'found' : 'not-found'}`;
@@ -620,10 +561,12 @@
                     <div class="ocr-label">${info.label}</div>
                     <input type="text" 
                            class="ocr-input" 
-                           id="ocr_${key}" 
+                           id="${inputId}" 
                            value="${hasValue ? value : ''}" 
                            placeholder="Not found - Enter manually"
+                           disabled
                            onchange="updateOCRField('${key}', this.value)">
+                    <button class="edit-btn" id="${editBtnId}" onclick="toggleEdit('${key}')">Edit</button>
                     <div class="copy-icon" onclick="copyToClipboard('${key}')" title="Copy to clipboard">
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
@@ -635,11 +578,25 @@
                 gridDiv.appendChild(itemDiv);
             }
             
-            // Enable save button
             saveBtn.disabled = false;
-            
-            // Show results
             resultsDiv.style.display = 'block';
+            hideProgressBar(); // Hide progress bar after results shown
+            isSavePending = true; // Block further captures until saved
+        }
+
+        // Add this function to your script section
+        function toggleEdit(key) {
+            const input = document.getElementById(`ocr_${key}`);
+            const btn = document.getElementById(`edit_${key}`);
+            if (input.disabled) {
+                input.disabled = false;
+                input.focus();
+                btn.textContent = 'Save';
+            } else {
+                input.disabled = true;
+                btn.textContent = 'Edit';
+                updateOCRField(key, input.value);
+            }
         }
 
         function updateOCRField(key, value) {
@@ -686,21 +643,99 @@
 
                 if (response.ok) {
                     showMessage(data.message, 'success');
+                    isSavePending = false;
+                    saveBtn.disabled = false;
+                    saveBtn.textContent = 'Save as JSON';
+                    // Restart timer and auto-capture if in live mode
+                    if (captureMode === 'live') {
+                        nextCaptureSeconds = 10;
+                        showTimer();
+                        startAutoCapture();
+                    }
                 } else {
                     showMessage(data.message, 'error');
                     saveBtn.disabled = false;
+                    saveBtn.textContent = 'Save as JSON';
                 }
             } catch (error) {
                 showMessage('Failed to save data: ' + error.message, 'error');
                 saveBtn.disabled = false;
-            } finally {
                 saveBtn.textContent = 'Save as JSON';
             }
+        }
+
+        function setCaptureMode(mode) {
+            captureMode = mode;
+            const captureBtn = document.getElementById('captureBtn');
+            if (mode === 'live') {
+                captureBtn.style.display = 'none'; // Hide button
+                startAutoCapture();
+                showTimer();
+            } else {
+                captureBtn.style.display = 'block'; // Show button
+                stopAutoCapture();
+                hideTimer();
+            }
+        }
+
+        function startAutoCapture() {
+            stopAutoCapture(); // Always clear previous intervals
+            nextCaptureSeconds = 10;
+            timerInterval = setInterval(updateTimer, 1000);
+            autoCaptureInterval = setInterval(() => {
+                if (!isCapturing && !isSavePending) {
+                    captureImage();
+                    nextCaptureSeconds = 10;
+                }
+            }, 10000); // 10 seconds
+        }
+
+        function stopAutoCapture() {
+            if (autoCaptureInterval) {
+                clearInterval(autoCaptureInterval);
+                autoCaptureInterval = null;
+            }
+            hideTimer();
+        }
+
+        function showTimer() {
+            let timerDiv = document.getElementById('timerDiv');
+            if (!timerDiv) {
+                timerDiv = document.createElement('div');
+                timerDiv.id = 'timerDiv';
+                timerDiv.style = 'text-align:center; margin-top:10px; font-size:18px; font-weight:600; color:#3182ce;';
+                document.querySelector('.controls').appendChild(timerDiv);
+            }
+            timerDiv.textContent = `Next capture in ${nextCaptureSeconds}s`;
+        }
+
+        function updateTimer() {
+            nextCaptureSeconds--;
+            let timerDiv = document.getElementById('timerDiv');
+            if (timerDiv) {
+                timerDiv.textContent = `Next capture in ${nextCaptureSeconds}s`;
+            }
+            if (nextCaptureSeconds <= 0) {
+                nextCaptureSeconds = 10;
+            }
+        }
+
+        function hideTimer() {
+            if (timerInterval) {
+                clearInterval(timerInterval);
+                timerInterval = null;
+            }
+            let timerDiv = document.getElementById('timerDiv');
+            if (timerDiv) timerDiv.remove();
         }
 
         // Update status every second
         setInterval(updateStatus, 1000);
         updateStatus();
+
+        window.onload = function() {
+            setCaptureMode('live');
+        };
     </script>
 </body>
 </html>
