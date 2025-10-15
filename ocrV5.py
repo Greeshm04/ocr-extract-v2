@@ -252,20 +252,20 @@ class RouterInfoExtractor:
                 if verbose:
                     print(f"🔍 {method.upper()} with {preprocess_name} preprocessing...")
 
-                if method == 'tesseract':
-                    # Try different PSM modes for Tesseract
-                    psm_modes = ['--psm 6', '--psm 4', '--psm 11']
-                    best_text = ""
+                # if method == 'tesseract':
+                #     # Try different PSM modes for Tesseract
+                #     psm_modes = ['--psm 6', '--psm 4', '--psm 11']
+                #     best_text = ""
 
-                    for psm in psm_modes:
-                        text = self.extract_text_tesseract(proc_image, psm)
-                        if len(text) > len(best_text):
-                            best_text = text
+                #     for psm in psm_modes:
+                #         text = self.extract_text_tesseract(proc_image, psm)
+                #         if len(text) > len(best_text):
+                #             best_text = text
 
-                    extracted_info = self.extract_information(best_text)
+                #     extracted_info = self.extract_information(best_text)
 
-                elif method == 'easyocr':
-                # if(method == 'easyocr' and (preprocess_name == "original" or preprocess_name == "enhanced")) : 
+                # elif method == 'easyocr':
+                if(method == 'easyocr' and (preprocess_name == "original" or preprocess_name == "enhanced")) : 
                     text = self.extract_text_easyocr(proc_image)
                     best_text = text
                     extracted_info = self.extract_information(text)
